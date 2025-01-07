@@ -5,12 +5,10 @@ from flask_restx import Api, Resource, fields
 
 app = Flask(__name__)
 
-# Flask App Configuration
 app.secret_key = "your secret key"
 app.config["SQLALCHEMY_DATABASE_URI"] = 'sqlite:///blog.db'
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
-# Initialize the database
 db = SQLAlchemy(app)
 
 # Flask-RESTX Setup for Swagger
@@ -37,8 +35,8 @@ blog_model = api.model('Blog', {
     'author_id': fields.Integer(required=True, description='The ID of the author'),
 })
 
-# Routes
 
+# Routes
 @app.route('/')
 def home():
     if 'username' in session:
@@ -91,10 +89,10 @@ def create_blog():
     if request.method == "POST":
         title = request.form['title']
         content = request.form['content']
-        author_id = session.get('user_id')  # Get the logged-in user's ID
+        author_id = session.get('user_id')  
 
         if not author_id:
-            return redirect(url_for('login'))  # Ensure user is logged in
+            return redirect(url_for('login')) 
 
         new_blog = Blog(title=title, content=content, author_id=author_id)
         db.session.add(new_blog)
@@ -112,7 +110,7 @@ def edit_blog(blog_id):
 
     if request.method == "POST":
         if blog.author_id != session.get('user_id'):
-            return jsonify({"message": "Unauthorized"}), 403  # Ensure only the author can edit
+            return jsonify({"message": "Unauthorized"}), 403  
 
         blog.title = request.form['title']
         blog.content = request.form['content']
@@ -129,14 +127,12 @@ def delete_blog(blog_id):
         return jsonify({"message": "Blog not found"}), 404
 
     if blog.author_id != session.get('user_id'):
-        return jsonify({"message": "Unauthorized"}), 403  # Ensure only the author can delete
+        return jsonify({"message": "Unauthorized"}), 403  
 
     db.session.delete(blog)
     db.session.commit()
     return redirect(url_for('home'))
 
-
-# API Routes for Blog Management with Swagger Documentation
 
 @ns.route('/')
 class BlogList(Resource):
@@ -200,8 +196,8 @@ class BlogResource(Resource):
         db.session.commit()
         return {'message': 'Blog deleted successfully'}
 
-# Initialize the app
+
 if __name__ == '__main__':
     with app.app_context():
-        db.create_all()  # Create tables in the database
+        db.create_all() 
     app.run(debug=True)
