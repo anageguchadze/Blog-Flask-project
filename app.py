@@ -72,15 +72,31 @@ def logout():
 
 @app.route('/create', methods=['GET', 'POST'])
 def create_blog():
-    ... # Todo!
+    data = request.get_json()
+    new_blog = Blog(name=data["name"], subject=data["subject"])
+    db.session.add(new_blog)
+    db.session.commit()
+    return jsonify({"message": "Blog was created!"}), 201
 
 @app.route('/edit/<int:blog_id>', methods=['GET', 'POST'])
 def edit_blog(blog_id):
-    ... # Todo!
+    data = request.get_json()
+    blog = Blog.query.get(id)
+    if not blog:
+        return jsonify({"message": "Blog not found"}), 404
+    blog.name = data['name']
+    blog.content = data['content']
+    db.session.commit()
+    return jsonify({"message": "Blog updated successfully"})
 
 @app.route('/delete/<int:blog_id>', methods=['POST'])
 def delete_blog(blog_id):
-    ... # Todo!
+    blog = Blog.query.get(id)
+    if not blog:
+        return jsonify({"message": "Blog not found"}), 404
+    db.session.delete(blog)
+    db.session.commit()
+    return jsonify({"message": "Blog deleted successfully"})
 
 if __name__ == '__main__':
     with app.app_context():
