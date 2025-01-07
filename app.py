@@ -72,31 +72,53 @@ def logout():
 
 @app.route('/create', methods=['GET', 'POST'])
 def create_blog():
-    data = request.get_json()
-    new_blog = Blog(name=data["name"], subject=data["subject"])
-    db.session.add(new_blog)
-    db.session.commit()
-    return jsonify({"message": "Blog was created!"}), 201
+    if request.method == "POST":
+        title = request.form['title']
+        content = request.form['content']
+        author_id = session.get('user_id')  # Get the logged-in user's ID
+
+        if not author_id:
+            return redirect(url_for('login'))  # Ensure user is logged in
+
+        new_blog = Blog(title=title, content=content, author_id=author_id)
+        db.session.add(new_blog)
+        db.session.commit()
+        return redirect(url_for('home'))
+
+    return render_template("create_blog.html")
+
 
 @app.route('/edit/<int:blog_id>', methods=['GET', 'POST'])
 def edit_blog(blog_id):
-    data = request.get_json()
-    blog = Blog.query.get(id)
+    blog = Blog.query.get(blog_id)
     if not blog:
         return jsonify({"message": "Blog not found"}), 404
-    blog.name = data['name']
-    blog.content = data['content']
-    db.session.commit()
-    return jsonify({"message": "Blog updated successfully"})
+
+    if request.method == "POST":
+        if blog.author_id != session.get('user_id'):
+            return jsonify({"message": "Unauthorized"}), 403  # Ensure only the author can edit
+
+        blog.title = request.form['title']
+        blog.content = request.form['content']
+        db.session.commit()
+        return redirect(url_for('home'))
+
+    return render_template("edit_blog.html", blog=blog)
+
 
 @app.route('/delete/<int:blog_id>', methods=['POST'])
 def delete_blog(blog_id):
-    blog = Blog.query.get(id)
+    blog = Blog.query.get(blog_id)
     if not blog:
         return jsonify({"message": "Blog not found"}), 404
+
+    if blog.author_id != session.get('user_id'):
+        return jsonify({"message": "Unauthorized"}), 403  # Ensure only the author can delete
+
     db.session.delete(blog)
     db.session.commit()
-    return jsonify({"message": "Blog deleted successfully"})
+    return redirect(url_for('home'))
+
 
 if __name__ == '__main__':
     with app.app_context():

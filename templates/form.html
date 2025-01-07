@@ -1,15 +1,19 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Simple Form</title>
+    <title>Create/Edit Blog</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-    <h1>Simple Form</h1>
+    <h1>{{ title }}</h1> <!-- Use dynamic title for create/edit -->
     <form method="POST">
         {{ form.hidden_tag() }}
-        {{ form.name.label }} {{ form.name() }}
+        <label>{{ form.title.label }}</label><br>
+        {{ form.title() }}<br>
+        <label>{{ form.content.label }}</label><br>
+        {{ form.content() }}<br>
         {{ form.submit() }}
     </form>
+    <a href="/">Back</a>
 </body>
 </html>
