@@ -1,14 +1,21 @@
 from flask import Flask, jsonify, render_template, request, redirect, url_for, session
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_sqlalchemy import SQLAlchemy
+from flask_restx import Api, Resource, fields
 
 app = Flask(__name__)
 
+# Flask App Configuration
 app.secret_key = "your secret key"
 app.config["SQLALCHEMY_DATABASE_URI"] = 'sqlite:///blog.db'
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
+# Initialize the database
 db = SQLAlchemy(app)
+
+# Flask-RESTX Setup for Swagger
+api = Api(app, version='1.0', title='Blog API', description='A simple blog API')
+ns = api.namespace('blogs', description='Blog operations')
 
 # Database Models
 class User(db.Model):
@@ -22,7 +29,16 @@ class Blog(db.Model):
     content = db.Column(db.Text, nullable=False)
     author_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
 
+# Swagger Model for Blog
+blog_model = api.model('Blog', {
+    'id': fields.Integer(readonly=True, description='The unique identifier of a blog'),
+    'title': fields.String(required=True, description='The title of the blog'),
+    'content': fields.String(required=True, description='The content of the blog'),
+    'author_id': fields.Integer(required=True, description='The ID of the author'),
+})
+
 # Routes
+
 @app.route('/')
 def home():
     if 'username' in session:
@@ -120,7 +136,72 @@ def delete_blog(blog_id):
     return redirect(url_for('home'))
 
 
+# API Routes for Blog Management with Swagger Documentation
+
+@ns.route('/')
+class BlogList(Resource):
+    def get(self):
+        """Get a list of all blogs"""
+        blogs = Blog.query.all()
+        return jsonify([{
+            'id': blog.id,
+            'title': blog.title,
+            'content': blog.content,
+            'author_id': blog.author_id
+        } for blog in blogs])
+
+    @api.expect(blog_model)
+    def post(self):
+        """Create a new blog"""
+        data = api.payload
+        new_blog = Blog(
+            title=data['title'],
+            content=data['content'],
+            author_id=data['author_id']
+        )
+        db.session.add(new_blog)
+        db.session.commit()
+        return {'message': 'Blog created successfully'}, 201
+
+@ns.route('/<int:id>')
+@api.response(404, 'Blog not found')
+@api.param('id', 'The blog identifier')
+class BlogResource(Resource):
+    def get(self, id):
+        """Get a single blog by its ID"""
+        blog = Blog.query.get(id)
+        if not blog:
+            api.abort(404, "Blog not found")
+        return {
+            'id': blog.id,
+            'title': blog.title,
+            'content': blog.content,
+            'author_id': blog.author_id
+        }
+
+    @api.expect(blog_model)
+    def put(self, id):
+        """Update a blog"""
+        blog = Blog.query.get(id)
+        if not blog:
+            api.abort(404, "Blog not found")
+        data = api.payload
+        blog.title = data['title']
+        blog.content = data['content']
+        db.session.commit()
+        return {'message': 'Blog updated successfully'}
+
+    def delete(self, id):
+        """Delete a blog"""
+        blog = Blog.query.get(id)
+        if not blog:
+            api.abort(404, "Blog not found")
+        db.session.delete(blog)
+        db.session.commit()
+        return {'message': 'Blog deleted successfully'}
+
+# Initialize the app
 if __name__ == '__main__':
     with app.app_context():
-        db.create_all()
+        db.create_all()  # Create tables in the database
     app.run(debug=True)
